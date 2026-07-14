@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dockerfile Linter</title>
+<meta name="description" content="Paste a Dockerfile and get best-practice warnings with severity and a fix for each. A static heuristic linter that runs entirely in your browser.">
+<link rel="canonical" href="https://0xelitesystem.github.io/dockerfile-linter/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dockerfile Linter">
+<meta property="og:description" content="Paste a Dockerfile and get best-practice warnings with severity and a fix for each. Runs entirely in your browser.">
+<meta property="og:url" content="https://0xelitesystem.github.io/dockerfile-linter/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Dockerfile Linter",
+  "description": "Paste a Dockerfile and get best-practice warnings with severity and a fix for each. A static heuristic linter that runs entirely in your browser.",
+  "url": "https://0xelitesystem.github.io/dockerfile-linter/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Organization", "name": "0xelitesystem" }
+}
+</script>
+<style>
+:root {
+  --bg: #fafaf6;
+  --surface: #ffffff;
+  --ink: #0a1d1e;
+  --ink-soft: #2c4a4c;
+  --rule: #c8d4d3;
+  --teal: #0f5c60;
+  --teal-deep: #0a4548;
+  --gold: #b07d2a;
+  --gold-deep: #8a611f;
+  --ok: #1a5c2e;
+  --warn: #8a5a00;
+  --err: #8b1a1a;
+  --code-bg: #f0ebe1;
+}
+[data-theme="dark"] {
+  --bg: #0c1c1d;
+  --surface: #14292a;
+  --ink: #e8ebe6;
+  --ink-soft: #b0c0bd;
+  --rule: #2a4042;
+  --teal: #4ab4ba;
+  --teal-deep: #6dc8ce;
+  --gold: #d4a155;
+  --gold-deep: #e6b876;
+  --ok: #6dd380;
+  --warn: #d4a155;
+  --err: #e88080;
+  --code-bg: #0a1718;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  line-height: 1.55;
+}
+.wrap { max-width: 1100px; margin: 0 auto; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 2px solid var(--teal);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--teal);
+}
+.tag {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.75rem;
+  color: var(--gold-deep);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+[data-theme="dark"] .tag { color: var(--gold); }
+.theme-btn {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.theme-btn:hover { border-color: var(--teal); color: var(--teal); }
+.lede {
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  margin-bottom: 1.75rem;
+  max-width: 65ch;
+}
+.input-box {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1.25rem;
+  margin-bottom: 1.75rem;
+  border-radius: 3px;
+}
+label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+textarea {
+  width: 100%;
+  min-height: 220px;
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  padding: 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  resize: vertical;
+  border-radius: 2px;
+}
+textarea:focus { outline: 2px solid var(--teal); outline-offset: 1px; }
+.input-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+button {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: 2px;
+}
+button:hover { border-color: var(--teal); }
+button.primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--surface);
+  font-weight: 600;
+}
+[data-theme="dark"] button.primary { color: var(--bg) !important; }
+button.primary:hover { background: var(--teal-deep); border-color: var(--teal-deep); }
+.privacy-note {
+  font-size: 0.78rem;
+  color: var(--gold-deep);
+  margin-top: 0.5rem;
+}
+[data-theme="dark"] .privacy-note { color: var(--gold); }
+.results { display: none; }
+.results.show { display: block; }
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  padding: 1rem 1.25rem;
+  border-radius: 3px;
+  margin-bottom: 1.25rem;
+}
+.count { display: flex; align-items: center; gap: 0.4rem; font-family: ui-monospace, monospace; }
+.dot { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+.dot-err { background: var(--err); }
+.dot-warn { background: var(--warn); }
+.dot-info { background: var(--teal); }
+.finding {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left-width: 4px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.85rem;
+  border-radius: 3px;
+}
+.finding.sev-error { border-left-color: var(--err); }
+.finding.sev-warning { border-left-color: var(--warn); }
+.finding.sev-info { border-left-color: var(--teal); }
+.finding-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+.finding-title { font-weight: 600; font-size: 0.95rem; }
+.sev-badge {
+  font-family: ui-monospace, monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.sev-badge.error { color: var(--err); border-color: var(--err); }
+.sev-badge.warning { color: var(--warn); border-color: var(--warn); }
+.sev-badge.info { color: var(--teal); border-color: var(--teal); }
+.line-ref {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+.finding-body { font-size: 0.88rem; color: var(--ink-soft); margin-top: 0.35rem; }
+.finding-fix {
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+  background: var(--code-bg);
+  border-radius: 2px;
+  padding: 0.6rem 0.85rem;
+}
+.finding-fix .fix-label {
+  font-family: ui-monospace, monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gold-deep);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+[data-theme="dark"] .finding-fix .fix-label { color: var(--gold); }
+.finding-fix code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.snippet {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  background: var(--code-bg);
+  padding: 0.3rem 0.5rem;
+  border-radius: 2px;
+  display: inline-block;
+  margin-top: 0.35rem;
+  word-break: break-all;
+}
+.clean-msg {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--ok);
+  padding: 1rem 1.25rem;
+  border-radius: 3px;
+  color: var(--ok);
+  font-weight: 600;
+}
+.error-msg {
+  color: var(--err);
+  font-size: 0.85rem;
+  margin-top: 0.85rem;
+  padding: 0.65rem;
+  background: var(--code-bg);
+  border-left: 3px solid var(--err);
+  border-radius: 2px;
+}
+.disclaimer {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 1.5rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--rule);
+  border-radius: 3px;
+}
+footer {
+  margin-top: 3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+footer a { color: var(--teal); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+  body { padding: 1rem 0.75rem; }
+  h1 { font-size: 1.4rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Dockerfile Linter</h1>
+    <div class="tag">Best-practice checks in your browser</div>
+  </div>
+  <button class="theme-btn" id="theme-toggle" type="button">Dark</button>
+</header>
+
+<p class="lede">Paste a Dockerfile and get a list of best-practice warnings, each with a severity and a suggested fix. This is a static heuristic linter: it reads your file line by line and pattern-matches against common issues. It does not build or execute anything. Nothing leaves this page.</p>
+
+<div class="input-box">
+  <label for="df-input">Dockerfile</label>
+  <textarea id="df-input" placeholder="FROM node:latest&#10;COPY . .&#10;RUN apt-get update &amp;&amp; apt-get install -y curl&#10;RUN npm install&#10;CMD [&quot;node&quot;, &quot;server.js&quot;]" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+  <div class="input-row">
+    <button class="primary" id="lint-btn" type="button">Lint</button>
+    <button id="sample-btn" type="button">Load sample</button>
+    <button id="clear-btn" type="button">Clear</button>
+  </div>
+  <div class="privacy-note">All analysis happens locally. The Dockerfile is never sent to any server.</div>
+</div>
+
+<div class="results" id="results">
+  <div class="summary" id="summary"></div>
+  <div id="findings"></div>
+</div>
+
+<div id="error-box"></div>
+
+<div class="disclaimer">Heads up: this is a heuristic linter, not a substitute for building your image. It flags common smells based on simple pattern matching and may produce false positives (for example, a pinned digest that it cannot fully validate) or miss context-specific issues. Treat every finding as a prompt to review, not a hard rule.</div>
+
+<footer>
+  <div>Dockerfile Linter. Open source, MIT licensed. Built by <a href="https://elitesystem.ai" target="_blank" rel="noopener">elitesystem.ai</a>.</div>
+  <div>Static heuristic checks. No external dependencies, works offline.</div>
+</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+const themeBtn = $("theme-toggle");
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  themeBtn.textContent = t === "dark" ? "Light" : "Dark";
+}
+themeBtn.addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  setTheme(cur === "dark" ? "light" : "dark");
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Parse the Dockerfile into logical instructions, honoring backslash line continuations.
+function parseInstructions(text) {
+  const rawLines = text.split(/\r?\n/);
+  const instructions = [];
+  let i = 0;
+  while (i < rawLines.length) {
+    const startLine = i + 1;
+    let content = rawLines[i];
+    // strip trailing whitespace for continuation detection
+    while (/\\\s*$/.test(content.replace(/\s+$/, "")) && i + 1 < rawLines.length) {
+      content = content.replace(/\\\s*$/, " ");
+      i++;
+      content += rawLines[i];
+    }
+    const trimmed = content.trim();
+    i++;
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
+    const m = trimmed.match(/^(\w+)\b([\s\S]*)$/);
+    if (!m) continue;
+    instructions.push({
+      startLine,
+      keyword: m[1].toUpperCase(),
+      args: m[2].trim(),
+      raw: trimmed
+    });
+  }
+  return instructions;
+}
+
+function lint(text) {
+  const instr = parseInstructions(text);
+  const findings = [];
+  const add = (severity, line, title, detail, fix, snippet) =>
+    findings.push({ severity, line, title, detail, fix, snippet });
+
+  // Track presence of key instructions per stage.
+  let sawUser = false;
+  let sawWorkdir = false;
+  let sawHealthcheck = false;
+  let sawExpose = false;
+  let sawCopyOrAdd = false;
+  let installLineAfterBroadCopy = false;
+  let runCount = 0;
+  let firstFromSeen = false;
+  let broadCopyLine = null;
+
+  const runLines = [];
+
+  for (const ins of instr) {
+    const kw = ins.keyword;
+    const args = ins.args;
+    const argsLower = args.toLowerCase();
+
+    if (kw === "FROM") {
+      firstFromSeen = true;
+      // reset per-stage tracking on a new stage
+      sawUser = false;
+      sawWorkdir = false;
+      sawExpose = false;
+      // base image pin check
+      // strip platform flags like --platform=...
+      const imgPart = args.replace(/--platform=\S+/gi, "").trim().split(/\s+as\s+/i)[0].trim();
+      const hasDigest = imgPart.includes("@sha256:");
+      const tagMatch = imgPart.match(/:([^@\s]+)/);
+      const tag = tagMatch ? tagMatch[1] : null;
+      if (!hasDigest) {
+        if (!tag) {
+          add("error", ins.startLine, "Base image not pinned (implicit latest)",
+            "No tag or digest means Docker pulls the `latest` tag, which is a moving target. Builds are not reproducible.",
+            "Pin an explicit version, for example `FROM " + imgPart + ":1.2.3` or a digest `FROM " + imgPart + "@sha256:<hash>`.",
+            ins.raw);
+        } else if (tag.toLowerCase() === "latest") {
+          add("error", ins.startLine, "Base image pinned to `latest`",
+            "`latest` is a moving tag. The image can change under you between builds, breaking reproducibility.",
+            "Pin a specific version tag or a digest, for example `FROM " + imgPart.split(":")[0] + ":1.2.3`.",
+            ins.raw);
+        }
+      }
+    }
+
+    if (kw === "USER") sawUser = true;
+    if (kw === "WORKDIR") sawWorkdir = true;
+    if (kw === "HEALTHCHECK") sawHealthcheck = true;
+    if (kw === "EXPOSE") sawExpose = true;
+
+    if (kw === "RUN") {
+      runCount++;
+      runLines.push(ins.startLine);
+
+      // apt-get without cleanup / no-install-recommends
+      if (/\bapt-get\s+install\b/.test(argsLower)) {
+        if (!/--no-install-recommends/.test(argsLower)) {
+          add("warning", ins.startLine, "apt-get install without --no-install-recommends",
+            "Recommended packages bloat the image with things you did not ask for.",
+            "Add `--no-install-recommends` to the install command.",
+            ins.raw);
+        }
+        const hasClean = /rm\s+-rf\s+\/var\/lib\/apt\/lists/.test(argsLower) || /apt-get\s+clean/.test(argsLower);
+        if (!hasClean) {
+          add("warning", ins.startLine, "apt-get without cleanup",
+            "The apt package lists are left in the layer, permanently increasing image size.",
+            "End the same RUN with `&& rm -rf /var/lib/apt/lists/*` so the cleanup shares the layer.",
+            ins.raw);
+        }
+      }
+
+      // sudo usage
+      if (/(^|\s)sudo\s/.test(argsLower)) {
+        add("warning", ins.startLine, "Use of sudo inside RUN",
+          "Docker build runs as root by default, so sudo is unnecessary and often not installed. It can also mask privilege intent.",
+          "Drop `sudo`. If you need to run as a non-root user, switch with a USER instruction and design the build around it.",
+          ins.raw);
+      }
+
+      // secrets in RUN (curl with token, etc.) is out of scope here; handled in ENV/ARG below
+    }
+
+    if (kw === "ADD") {
+      const addTarget = args.trim();
+      const isUrl = /^https?:\/\//i.test(addTarget) || /\s(https?:\/\/)/i.test(addTarget);
+      const isArchive = /\.(tar|tar\.gz|tgz|tar\.bz2|tar\.xz|gz|bz2|xz|zip)(\s|$)/i.test(addTarget);
+      if (!isUrl && !isArchive) {
+        add("warning", ins.startLine, "ADD used where COPY suffices",
+          "ADD has extra behavior (URL fetching, auto-extracting archives) that can surprise readers. For plain local files, COPY is clearer and safer.",
+          "Replace `ADD` with `COPY` for local files. Reserve ADD for remote URLs or archives you intend to auto-extract.",
+          ins.raw);
+      }
+    }
+
+    if (kw === "COPY" || kw === "ADD") {
+      sawCopyOrAdd = true;
+      // broad "COPY . ..." that precedes a dependency install busts the cache
+      // detect the source as first arg
+      const parts = args.replace(/--\S+/g, "").trim().split(/\s+/);
+      if (parts[0] === "." || parts[0] === "./") {
+        if (broadCopyLine === null) broadCopyLine = ins.startLine;
+      }
+    }
+
+    // ENV / ARG secret detection
+    if (kw === "ENV" || kw === "ARG") {
+      const secretPat = /(password|passwd|secret|api[_-]?key|apikey|access[_-]?key|token|private[_-]?key|aws_secret|client_secret)/i;
+      // only flag when a value is assigned (contains = with something after, or KEY VALUE form)
+      const assignsValue = /=/.test(args) ? /=\s*\S+/.test(args) : /\s+\S+/.test(args);
+      if (secretPat.test(args) && assignsValue) {
+        add("error", ins.startLine, "Possible hardcoded secret in " + kw,
+          "Secrets baked into ENV or ARG are stored in the image history and readable by anyone who can pull the image. ARG values also appear in `docker history`.",
+          "Never bake secrets into the image. Use BuildKit secret mounts (`RUN --mount=type=secret`) or inject at runtime with `-e` / a secrets manager.",
+          ins.raw);
+      }
+    }
+
+    // install command that comes after a broad copy
+    if (broadCopyLine !== null && !installLineAfterBroadCopy) {
+      const looksLikeInstall = /(npm\s+(ci|install|i)\b|yarn\s+install|pnpm\s+install|pip\s+install|bundle\s+install|go\s+mod\s+download|composer\s+install|mvn\s+|gradle\s+)/i.test(args);
+      if (kw === "RUN" && looksLikeInstall && ins.startLine > broadCopyLine) {
+        installLineAfterBroadCopy = true;
+        add("warning", broadCopyLine, "COPY . before installing dependencies",
+          "Copying the whole context before installing dependencies means any source change invalidates the dependency layer, so installs re-run on every build.",
+          "Copy only the manifest first (for example `COPY package*.json ./`), run the install, then `COPY . .` afterward.",
+          "COPY . . (line " + broadCopyLine + ") followed by install on line " + ins.startLine);
+      }
+    }
+  }
+
+  // Whole-file checks (only if there is at least one FROM)
+  if (firstFromSeen) {
+    if (!sawUser) {
+      add("error", null, "No USER instruction (runs as root)",
+        "Without a USER instruction the container process runs as root, widening the blast radius if the app is compromised.",
+        "Create and switch to a non-root user, for example `RUN adduser --system app` then `USER app`.",
+        null);
+    }
+    if (!sawWorkdir) {
+      add("info", null, "No WORKDIR set",
+        "Relying on the default working directory (often /) is error prone and makes relative paths ambiguous.",
+        "Set an explicit working directory, for example `WORKDIR /app`.",
+        null);
+    }
+    if (!sawHealthcheck) {
+      add("info", null, "No HEALTHCHECK",
+        "Without a HEALTHCHECK, orchestrators cannot tell whether the container is actually serving, only whether the process is alive.",
+        "Add a `HEALTHCHECK` that probes your app, for example `HEALTHCHECK CMD curl -f http://localhost:PORT/health || exit 1`.",
+        null);
+    }
+    if (!sawExpose) {
+      add("info", null, "No EXPOSE",
+        "EXPOSE documents which ports the container listens on. It is documentation (it does not publish ports) but it helps readers and tooling.",
+        "Add `EXPOSE <port>` for each port your service listens on.",
+        null);
+    }
+    if (runCount >= 3) {
+      add("info", runLines[0], runCount + " separate RUN layers",
+        "Each RUN creates a layer. Many small RUN steps that logically belong together add layers and can leave intermediate cruft behind.",
+        "Where it makes sense, chain related commands into one RUN with `&&` and line continuations to reduce layers.",
+        "First RUN at line " + runLines[0]);
+    }
+  }
+
+  // .dockerignore hint (always useful as an info)
+  if (sawCopyOrAdd) {
+    add("info", null, "Add a .dockerignore",
+      "This linter cannot see your .dockerignore. If you COPY the build context and do not have one, node_modules, .git, secrets and logs can leak into the image and bust the cache.",
+      "Create a `.dockerignore` next to the Dockerfile listing things like `.git`, `node_modules`, `*.log`, `.env`.",
+      null);
+  }
+
+  return findings;
+}
+
+function render(findings) {
+  const errors = findings.filter(f => f.severity === "error").length;
+  const warnings = findings.filter(f => f.severity === "warning").length;
+  const infos = findings.filter(f => f.severity === "info").length;
+
+  $("summary").innerHTML =
+    '<div class="count"><span class="dot dot-err"></span>' + errors + ' error' + (errors === 1 ? '' : 's') + '</div>' +
+    '<div class="count"><span class="dot dot-warn"></span>' + warnings + ' warning' + (warnings === 1 ? '' : 's') + '</div>' +
+    '<div class="count"><span class="dot dot-info"></span>' + infos + ' info</div>';
+
+  const container = $("findings");
+  if (findings.length === 0) {
+    container.innerHTML = '<div class="clean-msg">No issues found by the heuristic checks. Still review your Dockerfile manually before shipping.</div>';
+    return;
+  }
+
+  const order = { error: 0, warning: 1, info: 2 };
+  const sorted = findings.slice().sort((a, b) => {
+    if (order[a.severity] !== order[b.severity]) return order[a.severity] - order[b.severity];
+    return (a.line || 0) - (b.line || 0);
+  });
+
+  container.innerHTML = sorted.map(f => {
+    const lineRef = f.line ? 'Line ' + f.line : 'Whole file';
+    return '<div class="finding sev-' + f.severity + '">' +
+      '<div class="finding-head">' +
+        '<span class="finding-title">' + escapeHtml(f.title) + '</span>' +
+        '<span class="sev-badge ' + f.severity + '">' + f.severity + '</span>' +
+      '</div>' +
+      '<div class="line-ref">' + lineRef + '</div>' +
+      '<div class="finding-body">' + escapeHtml(f.detail) + '</div>' +
+      (f.snippet ? '<div class="snippet">' + escapeHtml(f.snippet) + '</div>' : '') +
+      '<div class="finding-fix"><span class="fix-label">Fix</span><code>' + escapeHtml(f.fix) + '</code></div>' +
+    '</div>';
+  }).join("");
+}
+
+function run() {
+  $("error-box").innerHTML = "";
+  const text = $("df-input").value;
+  if (!text.trim()) {
+    $("error-box").innerHTML = '<div class="error-msg">Paste a Dockerfile to lint.</div>';
+    $("results").classList.remove("show");
+    return;
+  }
+  const findings = lint(text);
+  render(findings);
+  $("results").classList.add("show");
+}
+
+const SAMPLE = `FROM node:latest
+
+ENV API_KEY=sk_live_abc123secretvalue
+
+ADD app.tar.gz /opt/
+
+COPY . .
+
+RUN npm install
+
+RUN apt-get update && apt-get install -y curl git
+
+RUN sudo chmod +x /app/start.sh
+
+CMD ["node", "server.js"]`;
+
+$("sample-btn").addEventListener("click", () => { $("df-input").value = SAMPLE; run(); });
+$("clear-btn").addEventListener("click", () => {
+  $("df-input").value = "";
+  $("results").classList.remove("show");
+  $("error-box").innerHTML = "";
+});
+$("lint-btn").addEventListener("click", run);
+$("df-input").addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") run();
+});
+
+setTheme("light");
+</script>
+</body>
+</html>
