@@ -336,7 +336,7 @@ footer a:hover { text-decoration: underline; }
 <div class="disclaimer">Heads up: this is a heuristic linter, not a substitute for building your image. It flags common smells based on simple pattern matching and may produce false positives (for example, a pinned digest that it cannot fully validate) or miss context-specific issues. Treat every finding as a prompt to review, not a hard rule.</div>
 
 <footer>
-  <div>Dockerfile Linter. Open source, MIT licensed. Built by <a href="https://elitesystem.ai" target="_blank" rel="noopener">elitesystem.ai</a>.</div>
+  <div>Dockerfile Linter. Open source, MIT licensed. Built by <a href="https://elitesystem.ai" target="_blank" rel="noopener">elitesystem.ai</a> &middot; <a href="https://github.com/0xelitesystem/dockerfile-linter" target="_blank" rel="noopener">Source on GitHub</a> &middot; <a href="https://0xelitesystem.github.io/" target="_blank" rel="noopener">More tools</a>.</div>
   <div>Static heuristic checks. No external dependencies, works offline.</div>
 </footer>
 </div>
@@ -646,6 +646,45 @@ $("df-input").addEventListener("keydown", (e) => {
 });
 
 setTheme("light");
+</script>
+<script>
+/* Remember the light or dark choice across visits. */
+(function () {
+  var KEY = "theme";
+  var btn = document.querySelector("#theme-toggle, #theme-btn, .theme-btn, .theme-toggle, [data-theme-toggle]");
+  function host() {
+    if (document.documentElement.hasAttribute("data-theme")) { return document.documentElement; }
+    if (document.body && document.body.hasAttribute("data-theme")) { return document.body; }
+    return document.documentElement;
+  }
+  function current() { return host().getAttribute("data-theme") || ""; }
+  function setter() {
+    if (typeof setTheme === "function") { return setTheme; }
+    if (typeof applyTheme === "function") { return applyTheme; }
+    return null;
+  }
+  function force(t) {
+    var fn = setter();
+    if (fn) { fn(t); return; }
+    host().setAttribute("data-theme", t);
+    var other = t === "dark" ? "Light" : "Dark";
+    var lbl = document.querySelector("#theme-label");
+    if (lbl && (lbl.textContent === "Dark" || lbl.textContent === "Light")) { lbl.textContent = other; }
+    else if (btn && (btn.textContent === "Dark" || btn.textContent === "Light")) { btn.textContent = other; }
+    if (btn && btn.hasAttribute("aria-pressed")) { btn.setAttribute("aria-pressed", String(t === "dark")); }
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) {}
+  if ((saved === "dark" || saved === "light") && saved !== current()) { force(saved); }
+  if (btn) {
+    btn.addEventListener("click", function () {
+      setTimeout(function () {
+        var t = current();
+        try { if (t) { localStorage.setItem(KEY, t); } } catch (e) {}
+      }, 0);
+    });
+  }
+})();
 </script>
 </body>
 </html>
